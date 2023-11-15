@@ -3,7 +3,7 @@ package com.example.demo.Service;
 import com.example.demo.Dto.UserDto;
 import com.example.demo.Entity.User;
 import com.example.demo.Repository.UserRepository;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import org.mindrot.jbcrypt.BCrypt;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
@@ -12,16 +12,14 @@ import java.util.Optional;
 public class UserService {
 
     private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
 
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public UserService(UserRepository userRepository) {
         this.userRepository = userRepository;
-        this.passwordEncoder = passwordEncoder;
     }
 
     public User registerUser(UserDto userDto) {
         // 비밀번호 암호화
-        String encryptedPassword = passwordEncoder.encode(userDto.getPassword());
+        String encryptedPassword = BCrypt.hashpw(userDto.getPassword(), BCrypt.gensalt());;
 
         // User 엔터티 생성 및 저장
         User newUser = new User();
@@ -34,6 +32,11 @@ public class UserService {
         Optional<User> userOptional = userRepository.findByUsername(userDto.getUsername());
 
         // 사용자가 존재하고, 비밀번호가 일치하면 사용자 반환
-        return userOptional.filter(user -> passwordEncoder.matches(userDto.getPassword(), user.getPassword()));
+        return userOptional.filter(user -> checkPassword(userDto.getPassword(), user.getPassword()));
+    }
+
+    public boolean checkPassword(String plainPassword, String hashedPassword) {
+        // BCrypt.checkpw 메서드를 사용하여 비밀번호 검증
+        return BCrypt.checkpw(plainPassword, hashedPassword);
     }
 }
